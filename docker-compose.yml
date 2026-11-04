@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-techhub}
+      POSTGRES_USER: ${DB_USERNAME:-techhub}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env (copie de .env.example)}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - techhub-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-techhub} -d ${DB_NAME:-techhub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  techhub-pgdata:
