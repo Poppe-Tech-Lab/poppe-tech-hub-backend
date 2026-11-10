@@ -104,6 +104,10 @@ Depois edite o `.env` e troque `DB_PASSWORD` por uma senha local. O mesmo arquiv
 | `DB_PORT`     | `5432`    | Porta publicada no host (mude se a 5432 já estiver em uso)  |
 | `DB_URL`      | —         | Opcional; sobrescreve a URL JDBC montada a partir das demais |
 | `SERVER_PORT` | `8080`    | Porta HTTP da aplicação                                    |
+| `USER_DIRECT_REGISTRATION_ENABLED` | `false` | Habilita o cadastro direto de usuários; use apenas em desenvolvimento |
+
+Se você já tinha um `.env` antes desta mudança, adicione `USER_DIRECT_REGISTRATION_ENABLED=true`
+para liberar o `POST /api/v1/users` localmente. Sem essa linha, o endpoint responde `404`.
 
 Se preferir não usar `.env`, exporte as variáveis no terminal (`DB_PASSWORD=...`) antes de rodar. No PowerShell: `$env:DB_PASSWORD = "..."`.
 
@@ -146,12 +150,66 @@ No PowerShell, se preferir: `Invoke-RestMethod http://localhost:8080/health`.
 
 > As demais rotas exigem autenticação (HTTP Basic). Em desenvolvimento, o Spring Security gera um usuário `user` com senha aleatória, impressa no log de inicialização.
 
+#### Usuários
+
+O cadastro direto é uma ferramenta de desenvolvimento e só é registrado quando
+`USER_DIRECT_REGISTRATION_ENABLED=true` (o `.env.example` já habilita para uso local).
+Ele continua exigindo autenticação Basic. Se a flag estiver desligada, o `POST`
+responde `404`; a consulta por ID permanece disponível e autenticada.
+
+Criar um usuário:
+
+```bash
+# Substitua SENHA pela senha gerada no log de inicialização.
+curl -u user:SENHA -X POST http://localhost:8080/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"email":"dev@example.com","password":"senha-forte"}'
+```
+
+```json
+{
+  "id": 1,
+  "email": "dev@example.com",
+  "enabled": true,
+  "createdAt": "2026-11-09T12:00:00Z"
+}
+```
+
+Consultar por ID:
+
+```bash
+curl -u user:SENHA http://localhost:8080/api/v1/users/1
+```
+
+Regras atendidas:
+
+- e-mail é normalizado com `trim` + minúsculas e validado;
+- e-mail duplicado retorna `409`, mesmo com diferenças de caixa/espaços;
+- a senha é validada e armazenada apenas como hash BCrypt;
+- a API nunca retorna senha nem hash;
+- erros usam `application/problem+json` (`400`, `401`, `404`, `409`).
+
+> O cadastro direto será substituído pelo cadastro por ADMIN autenticado em um card futuro.
+> Não habilite `USER_DIRECT_REGISTRATION_ENABLED` em produção.
+
+#### Swagger/OpenAPI
+
+Com a aplicação rodando:
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+Use o botão **Authorize** para informar o usuário e a senha do Basic Auth. Em produção,
+avalie desabilitar a documentação com `springdoc.api-docs.enabled=false` e
+`springdoc.swagger-ui.enabled=false`.
+
 ### 4. Migrations (Flyway)
 
 - Ficam em `src/main/resources/db/migration`.
 - Nomenclatura: `V<numero>__descricao_em_snake_case.sql` (ex.: `V2__create_user_table.sql`).
 - São aplicadas **automaticamente** na inicialização. O Hibernate está em `ddl-auto=validate`: ele apenas confere o mapeamento, nunca altera o schema.
-- A migration atual, `V1__create_project_table.sql`, cria a tabela `project` e valida o pipeline de ponta a ponta.
+- `V1__create_project_table.sql` cria a tabela `project` e valida o pipeline de ponta a ponta.
+- `V2__create_users_table.sql` cria a tabela `users`, com e-mail normalizado, hash de senha, flag `enabled` e timestamps. A unicidade é garantida por um índice em `lower(email)` e por um `CHECK` de e-mail em minúsculas.
 
 **Para adicionar uma migration:** crie o próximo número, revise o SQL e suba a aplicação; o Flyway aplica o que ainda não foi executado. Commite o arquivo junto com a mudança de código que depende dele.
 
@@ -177,32 +235,56 @@ No PowerShell, se preferir: `Invoke-RestMethod http://localhost:8080/health`.
 mvnw.cmd test
 ```
 
-Resultado esperado: `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`.
+Resultado esperado: `Tests run: 20, Failures: 0, Errors: 0, Skipped: 0`.
 
-Há dois testes complementares para o health-check:
+Testes complementares:
 
 - `HealthControllerTest` — teste de camada web (`@WebMvcTest`), rápido e sem banco. Verifica que `GET /health` responde `200` com `{"status":"UP"}`, passando pela configuração de segurança.
-- `HealthCheckIntegrationTest` — teste de integração de verdade (`@SpringBootTest` + porta aleatória). Sobe o contexto completo, um PostgreSQL efêmero via **Testcontainers** e aplica as migrations do Flyway; em seguida faz uma chamada HTTP real a `GET /health` sem autenticação. **Requer Docker.** Se o Docker não estiver disponível, este teste é ignorado automaticamente em vez de falhar.
+- `HealthCheckIntegrationTest` — teste de integração de verdade (`@SpringBootTest` + porta aleatória). Sobe o contexto completo, um PostgreSQL efêmero via **Testcontainers** e aplica as migrations do Flyway; em seguida faz uma chamada HTTP real a `GET /health` sem autenticação.
+- `EmailAddressTest` — testes unitários de normalização e validação de e-mail, sem Spring e sem banco.
+- `PasswordPolicyTest` — testes unitários de tamanho mínimo e do limite de bytes do BCrypt.
+- `UserIntegrationTest` — cadastro e consulta por HTTP real, persistência no PostgreSQL, hash BCrypt, recusa de e-mail duplicado, validação de entrada, autenticação obrigatória, resposta `404` e documentação OpenAPI sem `passwordHash`.
+- `UserRegistrationGateTest` — confirma que o cadastro direto nasce desabilitado e que o controller de consulta continua registrado.
 
-Para rodar apenas o teste de integração:
+Os testes de integração **requerem Docker**. Se o Docker não estiver disponível, eles são ignorados automaticamente em vez de falhar.
+
+Para rodar apenas os testes de usuário:
 
 ```bash
-mvnw.cmd -Dtest=HealthCheckIntegrationTest test   # Windows
-./mvnw -Dtest=HealthCheckIntegrationTest test     # Linux/macOS
+mvnw.cmd -Dtest=UserIntegrationTest test   # Windows
+./mvnw -Dtest=UserIntegrationTest test     # Linux/macOS
 ```
 
 ### 6. Estrutura relevante
 
 ```text
 src/main/java/poppe/com/poppetechhub/
-├── TechhubApplication.java      # classe main
-├── config/SecurityConfig.java   # libera /health e protege o restante
-└── health/HealthController.java # GET /health
+├── TechhubApplication.java              # classe main
+├── config/
+│   ├── SecurityConfig.java              # libera health/docs e protege o restante
+│   └── OpenApiConfig.java               # metadados e Basic Auth no Swagger
+├── health/HealthController.java         # GET /health
+└── user/
+    ├── User.java                        # entidade de identidade (sem roles)
+    ├── UserRepository.java
+    ├── UserService.java                 # normalização, duplicidade e hash
+    ├── PasswordHasher.java              # BCrypt sem interferir no usuário de dev
+    ├── UserQueryController.java         # GET /api/v1/users/{id}
+    ├── UserRegistrationController.java  # POST /api/v1/users (flag de dev)
+    ├── domain/
+    │   ├── EmailAddress.java            # value object + normalização
+    │   └── PasswordPolicy.java          # regras de senha
+    ├── dto/
+    │   ├── CreateUserRequest.java
+    │   └── UserResponse.java
+    └── exception/                       # erros de domínio + ProblemDetail
 src/main/resources/
-├── application.properties       # configuração via variáveis de ambiente
-└── db/migration/                # migrations Flyway
-docker-compose.yml               # PostgreSQL local
-.env.example                     # modelo das variáveis de ambiente
+├── application.properties               # configuração via variáveis de ambiente
+└── db/migration/
+    ├── V1__create_project_table.sql
+    └── V2__create_users_table.sql
+docker-compose.yml                       # PostgreSQL local
+.env.example                             # modelo das variáveis de ambiente
 ```
 
 ## Como contribuir
