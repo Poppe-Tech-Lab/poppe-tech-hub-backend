@@ -51,7 +51,7 @@ Issues públicas do GitHub servem para **bugs e propostas de melhoria que possam
 
 ## Arquitetura e execução local
 
-Este repositório contém o **backend** do Poppe Tech Hub: uma API em **Java 21 + Spring Boot**, com **PostgreSQL** e migrations versionadas com **Flyway**. O frontend vive em repositório próprio.
+Este repositório contém o **backend** do Poppe Tech Hub: uma API em **Java 25 + Spring Boot**, com **PostgreSQL** e migrations versionadas com **Flyway**. O frontend vive em repositório próprio.
 
 > **Importante:** execute os comandos a partir da **raiz do repositório**. É de lá que a aplicação lê o arquivo `.env`.
 
@@ -81,7 +81,7 @@ Os detalhes de cada etapa estão nas seções abaixo.
 
 ### Pré-requisitos
 
-- **JDK 21** (`java -version`)
+- **JDK 25** (`java -version`)
 - **Docker com Docker Compose** (`docker compose version`)
 - Maven **não** é necessário: o projeto inclui o wrapper (`mvnw` / `mvnw.cmd`)
 
