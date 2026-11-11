@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user;
+package com.poppe.poppetechhub.user;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

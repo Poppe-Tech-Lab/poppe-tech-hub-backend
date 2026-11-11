@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.exception;
+package com.poppe.poppetechhub.user.exception;
 
 public class UserNotFoundException extends RuntimeException {
 

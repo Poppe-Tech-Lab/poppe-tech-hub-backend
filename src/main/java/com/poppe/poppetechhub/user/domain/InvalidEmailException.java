@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.domain;
+package com.poppe.poppetechhub.user.domain;
 
 /**
  * Violação da regra de formato/normalização de e-mail.

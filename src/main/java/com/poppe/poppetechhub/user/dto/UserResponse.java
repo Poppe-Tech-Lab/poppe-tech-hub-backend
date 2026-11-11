@@ -1,7 +1,7 @@
-package poppe.com.poppetechhub.user.dto;
+package com.poppe.poppetechhub.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import poppe.com.poppetechhub.user.User;
+import com.poppe.poppetechhub.user.User;
 
 import java.time.Instant;
 

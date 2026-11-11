@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.domain;
+package com.poppe.poppetechhub.user.domain;
 
 /**
  * Violação das regras mínimas de senha antes da geração do hash.

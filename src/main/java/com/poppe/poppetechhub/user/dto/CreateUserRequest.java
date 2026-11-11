@@ -1,10 +1,10 @@
-package poppe.com.poppetechhub.user.dto;
+package com.poppe.poppetechhub.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import poppe.com.poppetechhub.user.domain.EmailAddress;
+import com.poppe.poppetechhub.user.domain.EmailAddress;
 
 @Schema(description = "Dados para cadastro direto de um usuário")
 public record CreateUserRequest(

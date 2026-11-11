@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.exception;
+package com.poppe.poppetechhub.user.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -9,8 +9,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
-import poppe.com.poppetechhub.user.domain.InvalidEmailException;
-import poppe.com.poppetechhub.user.domain.InvalidPasswordException;
+import com.poppe.poppetechhub.user.domain.InvalidEmailException;
+import com.poppe.poppetechhub.user.domain.InvalidPasswordException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

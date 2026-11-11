@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.domain;
+package com.poppe.poppetechhub.user.domain;
 
 import java.util.Locale;
 import java.util.regex.Pattern;

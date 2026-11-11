@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user.domain;
+package com.poppe.poppetechhub.user.domain;
 
 import java.nio.charset.StandardCharsets;
 

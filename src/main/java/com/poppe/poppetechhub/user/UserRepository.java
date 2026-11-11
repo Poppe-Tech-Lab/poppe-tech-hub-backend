@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.user;
+package com.poppe.poppetechhub.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

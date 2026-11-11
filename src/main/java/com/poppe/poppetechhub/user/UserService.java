@@ -1,13 +1,13 @@
-package poppe.com.poppetechhub.user;
+package com.poppe.poppetechhub.user;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import poppe.com.poppetechhub.user.domain.EmailAddress;
-import poppe.com.poppetechhub.user.domain.PasswordPolicy;
-import poppe.com.poppetechhub.user.dto.CreateUserRequest;
-import poppe.com.poppetechhub.user.exception.DuplicateEmailException;
-import poppe.com.poppetechhub.user.exception.UserNotFoundException;
+import com.poppe.poppetechhub.user.domain.EmailAddress;
+import com.poppe.poppetechhub.user.domain.PasswordPolicy;
+import com.poppe.poppetechhub.user.dto.CreateUserRequest;
+import com.poppe.poppetechhub.user.exception.DuplicateEmailException;
+import com.poppe.poppetechhub.user.exception.UserNotFoundException;
 
 @Service
 public class UserService {
