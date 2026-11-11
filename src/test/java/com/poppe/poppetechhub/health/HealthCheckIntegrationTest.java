@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.health;
+package com.poppe.poppetechhub.health;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

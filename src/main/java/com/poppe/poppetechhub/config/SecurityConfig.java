@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.config;
+package com.poppe.poppetechhub.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

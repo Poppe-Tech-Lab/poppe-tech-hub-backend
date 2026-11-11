@@ -1,4 +1,4 @@
-package poppe.com.poppetechhub.health;
+package com.poppe.poppetechhub.health;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
