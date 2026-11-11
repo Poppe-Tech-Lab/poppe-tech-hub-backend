@@ -194,7 +194,7 @@ mvnw.cmd -Dtest=HealthCheckIntegrationTest test   # Windows
 ### 6. Estrutura relevante
 
 ```text
-src/main/java/poppe/com/poppetechhub/
+src/main/java/com/poppe/poppetechhub/
 ├── TechhubApplication.java      # classe main
 ├── config/SecurityConfig.java   # libera /health e protege o restante
 └── health/HealthController.java # GET /health
