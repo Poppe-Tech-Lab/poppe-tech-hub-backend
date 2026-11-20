@@ -177,12 +177,13 @@ No PowerShell, se preferir: `Invoke-RestMethod http://localhost:8080/health`.
 mvnw.cmd test
 ```
 
-Resultado esperado: `Tests run: 2, Failures: 0, Errors: 0, Skipped: 0`.
+Resultado esperado: todos os testes passando.
 
-Há dois testes complementares para o health-check:
+Testes complementares do health-check e da documentação:
 
 - `HealthControllerTest` — teste de camada web (`@WebMvcTest`), rápido e sem banco. Verifica que `GET /health` responde `200` com `{"status":"UP"}`, passando pela configuração de segurança.
 - `HealthCheckIntegrationTest` — teste de integração de verdade (`@SpringBootTest` + porta aleatória). Sobe o contexto completo, um PostgreSQL efêmero via **Testcontainers** e aplica as migrations do Flyway; em seguida faz uma chamada HTTP real a `GET /health` sem autenticação. **Requer Docker.** Se o Docker não estiver disponível, este teste é ignorado automaticamente em vez de falhar.
+- `OpenApiDocsIntegrationTest` — mesmo padrão do anterior, mas chama `GET /v3/api-docs` e verifica que a especificação gerada contém a rota `/health`. Também **requer Docker** e é ignorado sem ele.
 
 Para rodar apenas o teste de integração:
 
@@ -191,18 +192,94 @@ mvnw.cmd -Dtest=HealthCheckIntegrationTest test   # Windows
 ./mvnw -Dtest=HealthCheckIntegrationTest test     # Linux/macOS
 ```
 
-### 6. Estrutura relevante
+### 6. Documentação da API (Swagger UI / OpenAPI)
+
+A especificação é **gerada em tempo de execução** pelo springdoc a partir dos controllers, dos DTOs e das anotações do Spring. Não existe arquivo OpenAPI versionado no repositório: o código é a única fonte de verdade.
+
+| Recurso | Endereço local |
+| --- | --- |
+| Swagger UI | `http://localhost:8080/swagger-ui.html` |
+| Especificação (JSON) | `http://localhost:8080/v3/api-docs` |
+| Especificação (YAML) | `http://localhost:8080/v3/api-docs.yaml` |
+
+`GET /health` aparece na documentação sem anotação extra, porque já é um `@RestController` público.
+
+Nas rotas protegidas, o botão *Try it out* do Swagger UI usa HTTP Basic: em desenvolvimento, informe o usuário `user` e a senha aleatória impressa no log de inicialização.
+
+#### Convenção: contrato antes da regra de negócio
+
+Ao criar um endpoint, declare **primeiro** o contrato no próprio Java e só depois implemente a regra:
+
+1. método HTTP e caminho no `@RequestMapping`/`@PostMapping`, sempre com o prefixo versionado `/api/v1/<recurso>`. A versão só muda diante de uma quebra real do contrato — não acompanha a versão da aplicação;
+2. DTOs de entrada e saída como `record`, no pacote `dto` do recurso (nunca a entidade JPA, que pode conter campos internos);
+3. status HTTP principais com `@ApiResponse` e um resumo com `@Operation`;
+4. por último, a regra de negócio.
+
+Como o springdoc lê a assinatura do método, declarar o contrato **é** publicá-lo. Se o endpoint ainda não puder ser implementado, um esqueleto provisório pode responder `501 Not Implemented` — nunca `200` vazio, que mentiria para o cliente. Esse esqueleto não deve existir em produção.
+
+Exemplo:
+
+```java
+@RestController
+@RequestMapping("/api/v1/invitations")
+@Tag(name = "Convites")
+public class InvitationController {
+
+	@PostMapping("/activate")
+	@Operation(summary = "Ativa o convite e cria a conta")
+	@ApiResponse(responseCode = "200", description = "Convite aceito")
+	@ApiResponse(responseCode = "409", description = "Convite já utilizado ou expirado")
+	public ResponseEntity<ActivationResponse> activate(@RequestBody ActivationRequest request) {
+		// TODO: regra de negócio fica na tarefa de implementação
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	public record ActivationRequest(
+		@Schema(description = "Código recebido no convite", example = "XXXX-XXXX")
+		String inviteCode,
+		String fullName,
+		String password
+	) {
+	}
+
+	public record ActivationResponse(Long userId, String email, List<String> roles) {
+	}
+}
+```
+
+Nunca use dados reais nos `example` do `@Schema`: códigos de convite, senhas e segredos não devem aparecer na documentação.
+
+#### Como o frontend usa isso para criar mocks
+
+O frontend não precisa do Swagger UI: ele consome o **JSON** de `/v3/api-docs`, onde `paths` lista método, caminho e status, e `components.schemas` descreve os DTOs. Com isso, monta tipos e respostas de exemplo (mocks) antes de o backend implementar a regra — quando a implementação chegar, o contrato é o mesmo e nada muda no cliente.
+
+#### Em produção
+
+O profile `prod` desliga a documentação (`src/main/resources/application-prod.properties`):
+
+```properties
+springdoc.api-docs.enabled=false
+springdoc.swagger-ui.enabled=false
+```
+
+Com `SPRING_PROFILES_ACTIVE=prod`, as rotas de documentação deixam de existir e o `SecurityConfig` também não registra a permissão de acesso a elas.
+
+### 7. Estrutura relevante
 
 ```text
 src/main/java/com/poppe/poppetechhub/
-├── TechhubApplication.java      # classe main
-├── config/SecurityConfig.java   # libera /health e protege o restante
-└── health/HealthController.java # GET /health
+├── TechhubApplication.java        # classe main
+├── config/
+│   ├── OpenApiConfig.java         # metadados da especificação (título, versão, Basic Auth)
+│   └── SecurityConfig.java        # libera /health e a doc (quando habilitada)
+├── health/HealthController.java   # GET /health
+└── user/                          # cadastro e consulta de usuários
 src/main/resources/
-├── application.properties       # configuração via variáveis de ambiente
-└── db/migration/                # migrations Flyway
-docker-compose.yml               # PostgreSQL local
-.env.example                     # modelo das variáveis de ambiente
+├── application.properties         # configuração via variáveis de ambiente
+├── application-prod.properties    # desliga a documentação em produção
+└── db/migration/                  # migrations Flyway
+docker-compose.yml                 # PostgreSQL local
+.env.example                       # modelo das variáveis de ambiente
 ```
 
 ## Como contribuir
